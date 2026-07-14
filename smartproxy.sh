@@ -137,7 +137,7 @@ save_proxy_config() {
     local country=$2
     local config_file="${CONFIG_FILE}"
 
-    python3 - <<PYEOF
+    python3 << PYEOF
 import json
 from datetime import datetime
 
@@ -165,15 +165,19 @@ PYEOF
 show_menu() {
     print_header
     
-    local config_file="${CONFIG_FILE}"
-    python3 - <<'PYEOF'
+    if [[ -f "${CONFIG_FILE}" ]]; then
+        python3 << PYEOF
 import json
-with open('${config_file}', 'r') as f:
-    config = json.load(f)
-    if config['current_proxy']:
-        print(f"پروکسی فعلی: {config['current_proxy']} {config['current_country']}")
-        print(f"آخرین بروزرسانی: {config['last_update']}\n")
+try:
+    with open('${CONFIG_FILE}', 'r') as f:
+        config = json.load(f)
+        if config.get('current_proxy'):
+            print(f"پروکسی فعلی: {config.get('current_proxy')} {config.get('current_country')}")
+            print(f"آخرین بروزرسانی: {config.get('last_update')}\n")
+except:
+    pass
 PYEOF
+    fi
 
     echo -e "${BLUE}منوی اختیارات:${NC}"
     echo -e "  ${CYAN}1)${NC} جسجو و انتخاب پروکسی جدید"
@@ -217,33 +221,41 @@ list_history() {
     print_header
     echo -e "${CYAN}تاریخچه پروکسی‌ها:${NC}\n"
     
-    local config_file="${CONFIG_FILE}"
-    python3 - <<'PYEOF'
+    if [[ -f "${CONFIG_FILE}" ]]; then
+        python3 << PYEOF
 import json
-with open('${config_file}', 'r') as f:
-    config = json.load(f)
-    if config['history']:
-        for i, item in enumerate(config['history'][-10:], 1):
-            print(f"{i}. {item['proxy']} ({item['country']})")
-    else:
-        print("هیچ پروکسی ذخیره‌شده‌ای نیست")
+try:
+    with open('${CONFIG_FILE}', 'r') as f:
+        config = json.load(f)
+        if config.get('history'):
+            for i, item in enumerate(config['history'][-10:], 1):
+                print(f"{i}. {item.get('proxy')} ({item.get('country')})")
+        else:
+            print("هیچ پروکسی ذخیره‌شده‌ای نیست")
+except:
+    print("خطا در خواندن فایل")
 PYEOF
+    fi
     read -p "\nبرای ادامه Enter بزنید..."
     show_menu
 }
 
 use_proxy() {
     print_header
-    local config_file="${CONFIG_FILE}"
-    python3 - <<'PYEOF'
+    if [[ -f "${CONFIG_FILE}" ]]; then
+        python3 << PYEOF
 import json
-with open('${config_file}', 'r') as f:
-    config = json.load(f)
-    if config['current_proxy']:
-        print(f"پروکسی فعلی: {config['current_proxy']}")
-    else:
-        print("هیچ پروکسی فعالی نیست")
+try:
+    with open('${CONFIG_FILE}', 'r') as f:
+        config = json.load(f)
+        if config.get('current_proxy'):
+            print(f"پروکسی فعلی: {config.get('current_proxy')}")
+        else:
+            print("هیچ پروکسی فعالی نیست")
+except:
+    print("خطا در خواندن فایل")
 PYEOF
+    fi
     read -p "\nبرای ادامه Enter بزنید..."
     show_menu
 }
@@ -263,22 +275,24 @@ manual_set() {
 
 remove_proxy() {
     print_header
-    unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY
+    unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY 2>/dev/null || true
     if [[ -f "${HOME}/.bashrc" ]]; then
         sed -i '/# SmartProxy Configuration/,/export HTTPS_PROXY=/d' "${HOME}/.bashrc" 2>/dev/null || true
     fi
     
-    local config_file="${CONFIG_FILE}"
-    python3 - <<PYEOF
+    python3 << PYEOF
 import json
-with open('${config_file}', 'r') as f:
-    config = json.load(f)
-config['current_proxy'] = ""
-config['current_country'] = ""
-with open('${config_file}', 'w') as f:
-    json.dump(config, f, indent=2)
+try:
+    with open('${CONFIG_FILE}', 'r') as f:
+        config = json.load(f)
+    config['current_proxy'] = ""
+    config['current_country'] = ""
+    with open('${CONFIG_FILE}', 'w') as f:
+        json.dump(config, f, indent=2)
+    print("✓ پروکسی حذف شد")
+except:
+    print("خطا در حذف پروکسی")
 PYEOF
-    echo -e "${GREEN}✓ پروکسی حذف شد${NC}"
     sleep 2
     show_menu
 }
