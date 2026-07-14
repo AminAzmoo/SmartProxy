@@ -40,25 +40,10 @@ log_message() {
 print_header() {
     clear
     echo -e "${CYAN}"
-    echo "╔════════════════════════════════════════════════════════════════╗"
+    echo "╔═══════════════════════════════════════════════════════════════╗"
     echo "║         SmartProxy - انتخاب‌گر پروکسی هوشمند          ║"
-    echo "╚════════════════════════════════════════════════════════════════╝"
+    echo "╚═══════════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
-}
-
-get_flag() {
-    local country=$1
-    case "${country,,}" in
-        us) echo "🇺🇸" ;;
-        gb) echo "🇬🇧" ;;
-        de) echo "🇩🇪" ;;
-        fr) echo "🇫🇷" ;;
-        jp) echo "🇯🇵" ;;
-        cn) echo "🇨🇳" ;;
-        ru) echo "🇷🇺" ;;
-        ir) echo "🇮🇷" ;;
-        *) echo "🌍" ;;
-    esac
 }
 
 test_proxy() {
@@ -150,12 +135,13 @@ EOF
 save_proxy_config() {
     local proxy=$1
     local country=$2
+    local config_file="${CONFIG_FILE}"
 
-    python3 << PYEOF
+    python3 - <<PYEOF
 import json
 from datetime import datetime
 
-with open('${CONFIG_FILE}', 'r') as f:
+with open('${config_file}', 'r') as f:
     config = json.load(f)
 
 config['current_proxy'] = '${proxy}'
@@ -171,7 +157,7 @@ config['history'].append({
     'timestamp': datetime.now().isoformat()
 })
 
-with open('${CONFIG_FILE}', 'w') as f:
+with open('${config_file}', 'w') as f:
     json.dump(config, f, indent=2, ensure_ascii=False)
 PYEOF
 }
@@ -179,9 +165,10 @@ PYEOF
 show_menu() {
     print_header
     
-    python3 << 'PYEOF'
+    local config_file="${CONFIG_FILE}"
+    python3 - <<'PYEOF'
 import json
-with open('${CONFIG_FILE}', 'r') as f:
+with open('${config_file}', 'r') as f:
     config = json.load(f)
     if config['current_proxy']:
         print(f"پروکسی فعلی: {config['current_proxy']} {config['current_country']}")
@@ -229,9 +216,11 @@ find_and_configure() {
 list_history() {
     print_header
     echo -e "${CYAN}تاریخچه پروکسی‌ها:${NC}\n"
-    python3 << 'PYEOF'
+    
+    local config_file="${CONFIG_FILE}"
+    python3 - <<'PYEOF'
 import json
-with open('${CONFIG_FILE}', 'r') as f:
+with open('${config_file}', 'r') as f:
     config = json.load(f)
     if config['history']:
         for i, item in enumerate(config['history'][-10:], 1):
@@ -245,9 +234,10 @@ PYEOF
 
 use_proxy() {
     print_header
-    python3 << 'PYEOF'
+    local config_file="${CONFIG_FILE}"
+    python3 - <<'PYEOF'
 import json
-with open('${CONFIG_FILE}', 'r') as f:
+with open('${config_file}', 'r') as f:
     config = json.load(f)
     if config['current_proxy']:
         print(f"پروکسی فعلی: {config['current_proxy']}")
@@ -277,13 +267,15 @@ remove_proxy() {
     if [[ -f "${HOME}/.bashrc" ]]; then
         sed -i '/# SmartProxy Configuration/,/export HTTPS_PROXY=/d' "${HOME}/.bashrc" 2>/dev/null || true
     fi
-    python3 << 'PYEOF'
+    
+    local config_file="${CONFIG_FILE}"
+    python3 - <<PYEOF
 import json
-with open('${CONFIG_FILE}', 'r') as f:
+with open('${config_file}', 'r') as f:
     config = json.load(f)
 config['current_proxy'] = ""
 config['current_country'] = ""
-with open('${CONFIG_FILE}', 'w') as f:
+with open('${config_file}', 'w') as f:
     json.dump(config, f, indent=2)
 PYEOF
     echo -e "${GREEN}✓ پروکسی حذف شد${NC}"
