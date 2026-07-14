@@ -41,7 +41,7 @@ print_header() {
     clear
     echo -e "${CYAN}"
     echo "╔═══════════════════════════════════════════════════════════════╗"
-    echo "║         SmartProxy - انتخاب‌گر پروکسی هوشمند          ║"
+    echo "║              SmartProxy - Proxy Selector                      ║"
     echo "╚═══════════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
 }
@@ -61,18 +61,18 @@ test_proxy() {
 
 fetch_proxies() {
     print_header
-    echo -e "${CYAN}در حال دریافت لیست پروکسی...${NC}\n"
+    echo -e "${CYAN}Fetching proxy list...${NC}\n"
     
     python3 "${SCRIPT_DIR}/proxy_finder.py" > "${PROXY_LIST_FILE}" 2>> "${LOG_FILE}"
     
     if [[ ! -f "${PROXY_LIST_FILE}" ]]; then
-        echo -e "${RED}✗ خطا: نتوانست پروکسی‌ها را دریافت کند${NC}"
+        echo -e "${RED}ERROR: Failed to fetch proxies${NC}"
         log_message "ERROR: Failed to fetch proxies"
         return 1
     fi
     
     local count=$(python3 -c "import json; print(len(json.load(open('${PROXY_LIST_FILE}', 'r'))))" 2>/dev/null || echo "0")
-    echo -e "${GREEN}✓ ${count} پروکسی دریافت شد${NC}\n"
+    echo -e "${GREEN}OK: ${count} proxies fetched${NC}\n"
 }
 
 find_best_proxy() {
@@ -82,24 +82,24 @@ find_best_proxy() {
         return 1
     fi
 
-    echo -e "${CYAN}در حال تست پروکسی‌ها (۳ بار برای هرکدام)...${NC}\n"
+    echo -e "${CYAN}Testing proxies (3 times each)...${NC}\n"
 
     local best_proxy=""
     local best_country=""
     
     while read -r proxy; do
-        echo -ne "${YELLOW}تست: ${proxy}...${NC}"
+        echo -ne "${YELLOW}Testing: ${proxy}...${NC}"
         if test_proxy "${proxy}"; then
-            echo -e " ${GREEN}✓ فعال${NC}"
+            echo -e " ${GREEN}OK${NC}"
             best_proxy="${proxy}"
             break
         else
-            echo -e " ${RED}✗${NC}"
+            echo -e " ${RED}FAIL${NC}"
         fi
     done < <(python3 -c "import json; [print(p['proxy']) for p in json.load(open('${PROXY_LIST_FILE}', 'r'))[:10]]" 2>/dev/null)
 
     if [[ -z "${best_proxy}" ]]; then
-        echo -e "\n${RED}✗ پروکسی فعالی پیدا نشد${NC}"
+        echo -e "\n${RED}ERROR: No working proxy found${NC}"
         log_message "ERROR: No working proxy found"
         return 1
     fi
@@ -128,7 +128,7 @@ export HTTPS_PROXY="http://${proxy}"
 EOF
     fi
     
-    echo -e "${GREEN}✓ پروکسی تنظیم شد: ${proxy}${NC}"
+    echo -e "${GREEN}OK: Proxy set to ${proxy}${NC}"
     log_message "INFO: Proxy configured: ${proxy}"
 }
 
@@ -172,22 +172,22 @@ try:
     with open('${CONFIG_FILE}', 'r') as f:
         config = json.load(f)
         if config.get('current_proxy'):
-            print(f"پروکسی فعلی: {config.get('current_proxy')} {config.get('current_country')}")
-            print(f"آخرین بروزرسانی: {config.get('last_update')}\n")
+            print(f"Current: {config.get('current_proxy')} ({config.get('current_country')})")
+            print(f"Updated: {config.get('last_update')}\n")
 except:
     pass
 PYEOF
     fi
 
-    echo -e "${BLUE}منوی اختیارات:${NC}"
-    echo -e "  ${CYAN}1)${NC} جسجو و انتخاب پروکسی جدید"
-    echo -e "  ${CYAN}2)${NC} نمایش تاریخچه"
-    echo -e "  ${CYAN}3)${NC} فعال‌کردن پروکسی فعلی"
-    echo -e "  ${CYAN}4)${NC} تنظیم دستی"
-    echo -e "  ${CYAN}5)${NC} حذف پروکسی"
-    echo -e "  ${CYAN}6)${NC} خروج\n"
+    echo -e "${BLUE}Options:${NC}"
+    echo -e "  ${CYAN}1)${NC} Find best proxy"
+    echo -e "  ${CYAN}2)${NC} Show history"
+    echo -e "  ${CYAN}3)${NC} Use current proxy"
+    echo -e "  ${CYAN}4)${NC} Set manual proxy"
+    echo -e "  ${CYAN}5)${NC} Remove proxy"
+    echo -e "  ${CYAN}6)${NC} Exit\n"
 
-    read -p "انتخاب: " choice
+    read -p "Choice: " choice
 
     case $choice in
         1) find_and_configure ;;
@@ -196,21 +196,21 @@ PYEOF
         4) manual_set ;;
         5) remove_proxy ;;
         6) exit 0 ;;
-        *) echo -e "${RED}انتخاب نامعتبر${NC}"; sleep 1; show_menu ;;
+        *) echo -e "${RED}Invalid choice${NC}"; sleep 1; show_menu ;;
     esac
 }
 
 find_and_configure() {
     if find_best_proxy; then
         print_header
-        echo -e "${GREEN}✓ پروکسی بهتری پیدا شد!${NC}\n"
-        read -p "آیا میخواهید این پروکسی را تنظیم کنید؟ (y/n): " confirm
+        echo -e "${GREEN}OK: Best proxy found!${NC}\n"
+        read -p "Set this proxy? (y/n): " confirm
         if [[ "${confirm}" == "y" ]]; then
             local proxy=$(python3 -c "import json; print(json.load(open('${PROXY_LIST_FILE}', 'r'))[0]['proxy'])" 2>/dev/null)
             local country=$(python3 -c "import json; print(json.load(open('${PROXY_LIST_FILE}', 'r'))[0].get('country', 'Unknown'))" 2>/dev/null)
             set_proxy_systemwide "${proxy}"
             save_proxy_config "${proxy}" "${country}"
-            echo -e "${GREEN}✓ عملیات تکمیل شد!${NC}"
+            echo -e "${GREEN}OK: Done!${NC}"
             sleep 2
         fi
     fi
@@ -219,7 +219,7 @@ find_and_configure() {
 
 list_history() {
     print_header
-    echo -e "${CYAN}تاریخچه پروکسی‌ها:${NC}\n"
+    echo -e "${CYAN}History:${NC}\n"
     
     if [[ -f "${CONFIG_FILE}" ]]; then
         python3 << PYEOF
@@ -231,12 +231,12 @@ try:
             for i, item in enumerate(config['history'][-10:], 1):
                 print(f"{i}. {item.get('proxy')} ({item.get('country')})")
         else:
-            print("هیچ پروکسی ذخیره‌شده‌ای نیست")
+            print("No saved proxies")
 except:
-    print("خطا در خواندن فایل")
+    print("Error reading file")
 PYEOF
     fi
-    read -p "\nبرای ادامه Enter بزنید..."
+    read -p "\nPress Enter to continue..."
     show_menu
 }
 
@@ -249,25 +249,26 @@ try:
     with open('${CONFIG_FILE}', 'r') as f:
         config = json.load(f)
         if config.get('current_proxy'):
-            print(f"پروکسی فعلی: {config.get('current_proxy')}")
+            print(f"Current proxy: {config.get('current_proxy')}")
         else:
-            print("هیچ پروکسی فعالی نیست")
+            print("No active proxy")
 except:
-    print("خطا در خواندن فایل")
+    print("Error reading file")
 PYEOF
     fi
-    read -p "\nبرای ادامه Enter بزنید..."
+    read -p "\nPress Enter to continue..."
     show_menu
 }
 
 manual_set() {
     print_header
-    read -p "آدرس پروکسی را وارد کنید (مثال: 192.168.1.1:8080): " proxy_input
+    read -p "Enter proxy address (example: 192.168.1.1:8080): " proxy_input
     if [[ -z "${proxy_input}" ]]; then
-        echo -e "${RED}پروکسی خالی است${NC}"
+        echo -e "${RED}ERROR: Proxy is empty${NC}"
     else
         set_proxy_systemwide "${proxy_input}"
         save_proxy_config "${proxy_input}" "Manual"
+        echo -e "${GREEN}OK: Proxy set${NC}"
     fi
     sleep 2
     show_menu
@@ -289,9 +290,9 @@ try:
     config['current_country'] = ""
     with open('${CONFIG_FILE}', 'w') as f:
         json.dump(config, f, indent=2)
-    print("✓ پروکسی حذف شد")
+    print("OK: Proxy removed")
 except:
-    print("خطا در حذف پروکسی")
+    print("ERROR: Failed to remove proxy")
 PYEOF
     sleep 2
     show_menu
@@ -305,7 +306,7 @@ main() {
         --list) list_history ;;
         --use) use_proxy ;;
         --remove) remove_proxy ;;
-        --set) [[ -z "${2:-}" ]] && echo "استفاده: $0 --set <proxy>" && exit 1; set_proxy_systemwide "$2"; save_proxy_config "$2" "Manual" ;;
+        --set) [[ -z "${2:-}" ]] && echo "Usage: $0 --set <proxy>" && exit 1; set_proxy_systemwide "$2"; save_proxy_config "$2" "Manual" ;;
         *) show_menu ;;
     esac
 }
